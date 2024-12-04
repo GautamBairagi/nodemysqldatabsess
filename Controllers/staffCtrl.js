@@ -1,5 +1,7 @@
 import { connection } from "../Config/dbConnect.js";
 
+import bcrypt from 'bcrypt'
+
 export const getallstaffs = async (req, res) => {
     try {
         const mysqlQuery = "SELECT * FROM staff";
@@ -31,18 +33,49 @@ export const getstaff = async (req, res) => {
     }
 }
 
+// export const createstaff = async (req, res) => {
+//     try {
+//         const { username, email, password } = req.body
+//         const staffdata = {
+//             username, email, password
+//         }
+//         const [result] = await connection.query("INSERT INTO staff SET ?", staffdata)
+//         if (result) {
+//             return res.status(200).json({ message: `${username} created sucessfully`, data: staffdata });
+//         }
+//         else {
+//             return res.status(404).json({ message: "staff not created" });
+//         }
+//     }
+//     catch (error) {
+//         return res.result.status(500).json({ message: "internal server error", error: error.message });
+
+//     }
+// }
+
+
 export const createstaff = async (req, res) => {
     try {
         const { username, email, password } = req.body
-        const staffdata = {
-            username, email, password
+
+        const existingstaff = await connection.query("SELECT email FROM staff WHERE email=?", email)
+        if(!existingstaff){
+            return res.status(403).json("staff already exist")
         }
-        const [result] = await connection.query("INSERT INTO staff SET ?", staffdata)
-        if (result) {
-            return res.status(200).json({ message: `${username} created sucessfully`, data: staffdata });
-        }
-        else {
-            return res.status(404).json({ message: "staff not created" });
+        else{
+            const hashpassword = await bcrypt.hash(password, 10)
+            const staffdata = {
+                username, 
+                email,
+                password : hashpassword,
+            }
+            const [result] = await connection.query("INSERT INTO staff SET ?", staffdata)
+            if (result) {
+                return res.status(200).json({ message: `${username} created sucessfully`, data: staffdata });
+            }
+            else {
+                return res.status(404).json({ message: "staff not created" });
+            }
         }
     }
     catch (error) {

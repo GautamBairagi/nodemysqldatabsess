@@ -1,4 +1,8 @@
 import { connection } from "../Config/dbConnect.js"
+import bcrypt from 'bcrypt'
+
+import jwt from 'jsonwebtoken';
+import { generatetoken } from "../Config/jwt.js";
 
 export const getallUsers = async (req, res) => {
     try {
@@ -14,6 +18,8 @@ export const getallUsers = async (req, res) => {
     }
 };
 
+
+
 export const getuser = (async (req, res) => {
     try {
         const { id } = req.params
@@ -27,21 +33,64 @@ export const getuser = (async (req, res) => {
 export const createuser = (async (req, res) => {
     try {
         const { username, email, password } = req.body
-        const userData = {
-            username,
-            email,
-            password,
+        const existinguser = await connection.query("SELECT email FROM users WHERE email=?", email)
+        if (!existinguser) {
+            return res.status(403).json("User already exist")
+        }
+        else {
+            const hashpassword = await bcrypt.hash(password, 10)
+            const userData = {
+                username,
+                email,
+                password: hashpassword,
+
+            }
+            const [result] = await connection.query("INSERT INTO users SET ?", userData)
+            result ? res.status(200).json({
+                message: `${username} created sucessfully`,
+                data: userData
+            }) : "User not created"
 
         }
-        const [result] = await connection.query("INSERT INTO users SET ?", userData)
-        result ? res.status(200).json({
-            message: `${username} created sucessfully`,
-            data: userData
-        }) : "User not created"
+
     } catch (error) {
         return res.status(500).json(error.message)
     }
 })
+
+
+
+
+export const userlogins = async (req, res) => { 
+    try {
+        const { email, password } = req.body
+        const [existinguser] = await connection.query("SELECT * FROM users WHERE email=?", [email])
+        if (!existinguser) {
+            res.status(403).json("User not found")
+        }
+        const user= existinguser[0]
+        const comprepassword = await bcrypt.compare(password, user.password)
+        if(!comprepassword)
+        {
+           return res.status(403).json("Password is incorrect")
+
+        }
+        const token =await generatetoken(user.id)
+        console.log(token);
+        
+            return res.status(201).json({ 
+                message: "Login Successfully",
+                 data:{
+                   username :user.username,
+                   email:user.email,
+                   token
+                }
+                })
+    }
+     catch (error) {
+        return res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+};
 
 export const updateuser = (async (req, res) => {
     try {

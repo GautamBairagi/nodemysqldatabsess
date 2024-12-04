@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  userlogins,
   createuser,
   getuser,
   getallUsers,
@@ -8,7 +9,7 @@ import {
 } from "../Controllers/AuthCtrl.js";
 
 const router = express.Router();
-
+router.post("/login",userlogins);
 router.post("/user", createuser);
 router.get("/users", getallUsers);
 router.get("/user/:id", getuser);
